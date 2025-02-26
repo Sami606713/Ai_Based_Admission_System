@@ -1,47 +1,62 @@
-# agents.py
-
 import os
 from langchain.agents import initialize_agent, AgentType
 from langchain.schema import SystemMessage
 from Tools.gather_data_tool import data_gather_tool
-from config.model import load_model
+from Tools.data_upload_tool import upload_data
+from config.model import admission_model
+from langchain.agents import Tool
 
 # ========================== #
 #    Load Tools and Memory
 # ========================== #
-tools, memory = data_gather_tool()
+info_gather_tool, memory = data_gather_tool()
 
-def AdmissionAgent(query: str, memory):
-    """
-    Initializes and runs the Admission Agent with the provided query and memory.
-    """
-    # ========================== #
-    #    Define Admission Context
-    # ========================== #
-    with open("Prompts/system_prompt.md", "r", encoding="utf-8") as f:
-        ADMISSION_CONTEXT = f.read()
 
-    # Add system message to memory if needed
+# ========================== #
+data_upload_tool =[
+        Tool(
+            name="Data Upload Tool",
+            func=upload_data,
+            description="Uploads data to the Airtable database."
+        )
+    ]
+# =========Document upload to Airtable================
+
+# ========================== #
+#    Define Admission Context
+# ========================== #
+with open("Prompts/system_prompt.md", "r", encoding="utf-8") as f:
+    ADMISSION_CONTEXT = f.read()
+
+# Add system message only once
+if not memory.chat_memory.messages:
     memory.chat_memory.add_message(SystemMessage(content=ADMISSION_CONTEXT))
 
-    # ========================== #
-    #    Initialize Admission Agent
-    # ========================== #
-    admission_agent = initialize_agent(
-        tools=tools,
-        llm=load_model(),
-        agent=AgentType.CONVERSATIONAL_REACT_DESCRIPTION,
-        verbose=True,
-        memory=memory,
-        handle_parsing_errors=True
-    )
+def AdmissionAgent(query: str):
+    """
+    Initializes and runs the Admission Agent with the provided query.
+    """
+    try:
+        # ========================== #
+        #    Initialize Admission Agent
+        # ========================== #
+        admission_agent = initialize_agent(
+            tools=[*info_gather_tool,*data_upload_tool],
+            llm=admission_model(),
+            agent=AgentType.CONVERSATIONAL_REACT_DESCRIPTION,
+            verbose=True,
+            memory=memory,
+            handle_parsing_errors=True
+        )
 
-    # ========================== #
-    #       Generate Response
-    # ========================== #
-    response = admission_agent.run(query)
-    return response, memory
+        # ========================== #
+        #       Generate Response
+        # ========================== #
+        response = admission_agent.run(query)
+        return response
 
+    except Exception as e:
+        return f"Error processing query: {str(e)}"
 
 # ========================== #
 #       Example Interaction
@@ -51,6 +66,5 @@ if __name__ == "__main__":
         query = input("You: ")
         if query.lower() == "q":
             break
-        response, memory = AdmissionAgent(query, memory)
+        response = AdmissionAgent(query)
         print(response)
-    # print(memory)  # Uncomment to inspect memory if needed

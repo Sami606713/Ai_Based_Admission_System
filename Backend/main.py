@@ -49,14 +49,20 @@ if query:
     # If admission is not in progress, route the query
     else:
         intent = route_query(query=query)
-        st.error(f"Intent: {intent} | Query: {query}")
+        st.error(f"Intent: {intent} | Query: {query} {type(intent)}")
+        
+        # response = conversation_agent(query)
+        # response_text = response[0] if isinstance(response, tuple) else response
+        # st.success(response_text)
 
         if intent == "information":
+            print("Routing to conversation......")
             response = conversation_agent(query)
             response_text = response[0] if isinstance(response, tuple) else response
             st.success(response_text)
 
         elif intent == "admission":
+            print("Routing to admission......") 
             st.session_state.in_admission = True
             st.session_state.admission_complete = False
             response, st.session_state.memory = AdmissionAgent(query, st.session_state.memory)

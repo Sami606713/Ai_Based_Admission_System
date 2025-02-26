@@ -3,7 +3,7 @@ from langchain_community.tools import TavilySearchResults
 from langchain.agents import initialize_agent, AgentType
 from langchain.agents import Tool
 from Tools.conversation_tool import search_tool
-from config.model import load_model
+from config.model import conversation_model
 
 
 
@@ -20,7 +20,7 @@ def conversation_agent(query):
     # Create an agent
     agent = initialize_agent(
         tools=tools,
-        llm=load_model(),
+        llm=conversation_model(),
         agent=AgentType.ZERO_SHOT_REACT_DESCRIPTION,
         verbose=True,
         handle_parsing_errors=True
@@ -31,6 +31,9 @@ def conversation_agent(query):
     return response
 
 if __name__ == "__main__":
-    query = "What is the fee structure of the university of Haripur?"
-    response = conversation_agent(query)
-    print(response)
+    while True:
+        query = input("You: ")
+        if query.lower() == "q":
+            break
+        response = conversation_agent(query)
+        print(response)
